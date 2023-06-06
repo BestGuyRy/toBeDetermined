@@ -1,58 +1,159 @@
+import java.awt.*;
 import java.io.*;
+import java.text.DecimalFormat;
 import java.util.*;
 public class Project {
     public static void main(String[] args) throws FileNotFoundException {
         Scanner main = new Scanner(System.in);
-       //files path with information or just string with information
-        String majorFile = //add majorfile;
-        String jobsFile = //add jobFile;
-        String salariesFile = //add salariesFile;
+        //files path with information or just string with information
+        String majorFile = "D:\\Desktop\\School Stuff\\[401] CS& 141 - Computer Science I\\Coding Projects\\Group Project 4\\src\\Majors.txt";
+        String jobsFile = "D:\\Desktop\\School Stuff\\[401] CS& 141 - Computer Science I\\Coding Projects\\Group Project 4\\src\\JobsFile.txt";
+        String salariesFile = "D:\\Desktop\\School Stuff\\[401] CS& 141 - Computer Science I\\Coding Projects\\Group Project 4\\src\\SalariesFile.txt";
+        System.out.println("This interactive program prompts the user to enter a Tilt Score or choose majors from a four-year university, then choose corresponding job titles.\nThe user will then input student loan information to determine if their average salaries will be able to cover their monthly loan payments.\nThis is applicable to universities in the United States only.\n");
 
-        //interactive portion
-        String major = majorChoice(main, majorFile);
-        String job = jobChoice(main, jobsFile, major);
-        int salary = getSalary(salariesFile, job);
-        String loanSummary = loanCalculuation(main, major, job, salary);
-        
-        //will print out all information on a final file (need to find out how to make a file)
-        String finalFile = fileCreation(main);
-        if(finalFile.equals("This is the end of the program.")) {
-            PrintStream finalOutput = new PrintStream(new File(finalFile));
-            finalOutput.print(loanSummary);
+        // Create tilt score range arrays, upper and lower.
+        double[] lowerRanges = {-0.47, -0.30, -0.19, -0.18, -0.11, -0.04, -0.04, -0.01, 0.06, 0.12, 0.18, 0.27, 0.42};
+        double[] upperRanges = {-0.29, -0.20, -0.19, -0.12, -0.05, -0.04, -0.02, 0.05, 0.11, 0.17, 0.26, 0.41, 0.42};
+
+        // Create array with specific majors to match with tilt score ranges.
+        String[][] specificMajors = {
+                {"Classical Studies", "English", "Linguistics"},
+                {"Communication"},
+                {"Philosophy", "Psychology"},
+                {"Anthropology", "History", "Law, Societies, and Justice", "Political Science", "Real Estate",
+                        "Social Welfare", "Sociology"},
+                {"Education Studies"},
+                {"Art", "Art History", "Cinema & Media Studies", "Drama", "Music"},
+                {"Food Systems, Nutrition, and Health", "Medical Laboratory Science", "Neuroscience", "Nursing",
+                        "Public Health - Global Health"},
+                {"Biochemistry", "Biology", "Marine Biology", "Microbiology"},
+                {"Business Administration", "Economics"},
+                {"Astronomy", "Atmospheric Sciences", "Chemistry", "Environmental Studies", "Geography", "Physics"},
+                {"Computer Science", "Informatics"},
+                {"Architecture", "Bioengineering", "Chemical Engineering", "Civil Engineering",
+                        "Computer Science and Engineering", "Electrical Engineering", "Environmental Engineering",
+                        "Industrial Engineering", "Mechanical Engineering"},
+                {"Aeronautics and Astronautics", "Earth and Space Sciences", "Mathematics"}
+        };
+        getUserTiltScore(lowerRanges, upperRanges, specificMajors);
+
+        //printing majors & storing majors in array
+        Scanner majorsInFile = new Scanner(new File(majorFile));
+        String[] majorsChoices = new String[50]; //dependent on #majors;
+        for (int j = 0; j < majorsChoices.length; j++) {
+            majorsChoices[j] = majorsInFile.nextLine();
+            System.out.printf("%-37s", majorsChoices[j]);
+            if((j + 1 )% 5 == 0) System.out.println();
+        }
+        System.out.println();
+
+        //stores information of chosen majors
+        int numberOfMajors = numberOfMajorsInterested(main);
+        String[] majors = new String[numberOfMajors];
+        String[] jobs = new String[numberOfMajors];
+        int[] salaries = new int[numberOfMajors];
+
+        //get major/job/salary information from and for the user
+        for(int run = 0; run < numberOfMajors;run++) {
+            majors[run] = majorChoice(main, majorsChoices, run);
+            jobs[run] = jobChoice(main, jobsFile, majors[run]);
+            salaries[run] = getSalary(salariesFile, jobs[run]);
+        }
+
+        //will calculate loan information and print the summary onto a final file
+        fileCreation(main, loanCalculuation(main, majors, jobs, salaries));
+    }
+    //tiltScore
+    public static void getUserTiltScore(double[] lowerRanges, double[] upperRanges, String[][] specificMajors) {
+        Scanner console = new Scanner(System.in);
+
+        System.out.print("Would you like to use your Tilt Score to determine your major? (yes/no) ");
+        String response = console.nextLine();
+
+        while (!response.equalsIgnoreCase("yes") && !response.equalsIgnoreCase("no")) {
+            System.out.println("Invalid input. Please try again.");
+            System.out.print("Would you like to use your Tilt Score to determine your major? (yes/no) ");
+            response = console.nextLine();
+        }
+
+        if (response.equalsIgnoreCase("yes")) {
+            System.out.print("\nWhat is your Tilt Score? ");
+
+            while (!console.hasNextDouble()) {
+                System.out.println("Invalid input. Please enter a number in decimal format.");
+                System.out.print("What is your Tilt Score? ");
+                console.nextLine();
+            }
+
+            double tiltScore = console.nextDouble();
+            console.nextLine();
+
+            int matchingIndex = findMatchingIndex(tiltScore, lowerRanges, upperRanges);
+
+            if (matchingIndex >= 0 && matchingIndex < specificMajors.length) {
+                System.out.println("\nThese are the majors that correspond to your Tilt Score:");
+                for (String major : specificMajors[matchingIndex]) {
+                    System.out.println("- " + major);
+                }
+                System.out.println();
+                System.out.println("Additionally, here is the complete list of Majors:");
+            } else {
+                System.out.println("\nNo matching majors found based on your Tilt Score.");
+                System.out.println("\nHere is the complete list of Majors to choose from:");
+            }
+        } else if(response.equalsIgnoreCase("no")){
+            System.out.println("\nHere is the complete list of Majors to choose from:");
         }
     }
 
-    // majors
-    public static String majorChoice(Scanner main,String majorFile) throws FileNotFoundException {
-        Scanner majors = new Scanner(new File(majorFile));
-        String[] majorsChoices = new String[50]; //dependent on #majors;
-        for (int j = 0; j < majorsChoices.length; j++) {
-            majorsChoices[j] = majors.nextLine();
-            System.out.println(majorsChoices[j]);
+    public static int findMatchingIndex(double averageTiltScore, double[] lowerRanges, double[] upperRanges) {
+        for (int i = 0; i < lowerRanges.length; i++) {
+            if (averageTiltScore >= lowerRanges[i] && averageTiltScore <= upperRanges[i]) {
+                return i;
+            }
         }
-        System.out.print("\nChosen major: ");
+        return -1;
+    }
+    public static int numberOfMajorsInterested(Scanner main) {
+        System.out.print("\nHow many majors are you interested in? (max 12) ");
+        while(!main.hasNextInt()) {
+            main.nextLine();
+            System.out.println("Invalid input. Please try again.");
+            System.out.print("How many majors are you interested in? ");
+        }
+        int majors = main.nextInt();
+        if(majors > 12) {
+            numberOfMajorsInterested(main);
+        } else {
+            main.nextLine();
+        }
+        return majors;
+    }
+
+    // majors
+    public static String majorChoice(Scanner main,String[] majorsChoices, int run) throws FileNotFoundException {
+        System.out.print("\nChosen major #" + (run + 1) + ": ");
         String major = main.nextLine();
         int i = 0;
         while (i < majorsChoices.length) {
             if (major.equalsIgnoreCase(majorsChoices[i])) {
                 major = majorsChoices[i];
-                i = majorsChoices.length;
+                break;
             }
             i++;
             if (i == majorsChoices.length) {
                 i = 0;
-                System.out.println("Invalid major inputted. Please try again and chose from the list provided.");
+                System.out.println("Invalid major inputted. Please try again and choose from the list provided.");
                 System.out.print("Chosen major: ");
                 major = main.nextLine();
             }
         }
         return major;
     }
-    
     //jobs
     public static String jobChoice(Scanner main, String jobsFile, String major) throws FileNotFoundException {
         Scanner jobFile = new Scanner(new File(jobsFile));
-        String jobs[] = new String[10]; //depends on #jobs following majors
+        String jobs[] = new String[10];
         String majorInFile = "Jobs you can get with a four-year " + major + " degree:";
         //prints jobs of major
         System.out.println("\n" + majorInFile);
@@ -72,20 +173,18 @@ public class Project {
         while (i < jobs.length) {
             if (job.equalsIgnoreCase(jobs[i])) {
                 job = jobs[i];
-                salary =
-                i = jobs.length;
+                break;
             }
             i++;
             if (i == jobs.length) {
                 i = 0;
-                System.out.println("Invalid input. Please chose a job from the list above.");
+                System.out.println("Invalid input. Please choose a job from the list above.");
                 System.out.print("Job of Interest: ");
                 job = main.nextLine();
             }
         }
         return job;
     }
-    
     //salary
     public static int getSalary(String salariesFile, String job) throws FileNotFoundException {
         Scanner salaries = new Scanner(new File(salariesFile)); //
@@ -96,15 +195,13 @@ public class Project {
         }
         return 0;
     }
-    
     // loan information
-    public static String loanCalculuation(Scanner main, String major, String job, int salary) throws FileNotFoundException {
-        System.out.println("\nBased on your career of interest the following prompts will provide some information on your student loan payments");
-        System.out.printf("The national average yearly salary for a %s is $%d\n", job, salary);
+    public static String loanCalculuation(Scanner main, String[] majors, String[] jobs, int[] salaries) throws FileNotFoundException {
+        System.out.println("\nBased on your careers of interest the following prompts will provide some information on your student loan payments.");
         //loan
         System.out.print("\nStudent loan amount: $");
         while (!main.hasNextInt()){
-            System.out.println("This is an invalid output. Please try again.");
+            System.out.println("Invalid input. Please try again.");
             System.out.print("Student loan amount: $");
             main.nextLine();
         }
@@ -114,7 +211,7 @@ public class Project {
         System.out.print("\nStudent loan rate (as a percent): ");
         while (!main.hasNextDouble()) {
             main.next();
-            System.out.println("This is an invalid output. Please put your loan rate in as a percent (w/o the percent symbol)");
+            System.out.println("Invalid input. Please put your loan rate in as a percent (w/o the percent symbol).");
             System.out.print("Student loan rate (as a percent): ");
             main.nextLine();
         }
@@ -124,59 +221,171 @@ public class Project {
         System.out.print("\nTerm of loan (in years): ");
         while (!main.hasNextInt()) {
             main.next();
-            System.out.println("This is an invalid input. Make sure you are inputting a numerical value, no special characters.");
+            System.out.println("Invalid input. Make sure you are inputting a numerical value, no special characters.");
             System.out.print("Term of loan (in years): ");
             main.nextLine();
         }
         int loanTerm = main.nextInt();
-
+        int loanMonthlyPay = (int) Math.round(loanRate / 12.0 / 100 * (loanAmount / (1 - (1 / Math.pow(1 + loanRate / 12.0 / 100, loanTerm * 12)))));
         // calculation monthly loan payment
-        double loanMonthlyPay = loanRate / 12.0/100 * (loanAmount / (1 - (1 / Math.pow(1 + loanRate / 12.0/100, loanTerm * 12))));
-        double loanPercentSalary = loanMonthlyPay *12/ salary * 100;
-        String loanSummary = "Major: " + major + "\nChosen job: " + job + "\nAverage yearly salary: " + salary
-                + "\nLoan: " + loanAmount + "\nInterest rate: " + roundingTenths(loanRate) + "\nTerm of loan: " + loanTerm
-                + " years" + "\nMonthly loan payment: $" + roundingTenths(loanMonthlyPay) + "\nPercent of monthly salary going towards loan: "
-                + roundingTenths(loanPercentSalary);
-        System.out.println("\nSummary of provided information: " + loanSummary);
-        return loanSummary;
+        String loanInformation = "\nLoan: " + loanAmount + "\nInterest rate: " + loanRate + "%\nTerm of loan: " + loanTerm
+                + " years" + "\nMonthly loan payment: $" + loanMonthlyPay;
+        String loanSummary = "";
+        // Launches a variable size drawing panel window
+        int fxCount = majors.length, fX = 420, fY = 270, graphX = 40, graphY = 70;
+        if (majors.length > 1) fY += 200;
+        if (majors.length > 2) fY += 200;
+        if (majors.length > 3) fX += 380;
+        if (majors.length > 6) fX += 380;
+        if (majors.length > 9) fX += 380;
+        DrawingPanel panel = new DrawingPanel(fX, fY);
+        Graphics g = panel.getGraphics();
+        g.setColor(Color.LIGHT_GRAY);
+        g.fillRect(0, 0, fX, fY);
+        g.setColor(Color.BLACK);
+        g.setFont(new Font("Trebuchet MS", Font.BOLD, 40));
+        g.drawString("Job-O-Meter", fX / 2 - 115, 50);
+        // end of drawing panel creation stuff
+        for(int i = 0; i < majors.length; i++) {
+            //System.out.printf("The national average yearly salary for a %s is $%d\n", jobs[i], salaries[i]);
+            int loanPercentSalary = (int) Math.round(loanMonthlyPay * 12.0 / salaries[i] * 100);
+            double doubleLoanPercentSalary = (double) (loanMonthlyPay * 12) / salaries[i] * 100;
+            loanSummary += "\nMajor: " + majors[i] + "\nChosen job: " + jobs[i] + "\nAverage yearly salary: $" + salaries[i]
+                    + "\nPercent of monthly salary going towards loan: "
+                    + loanPercentSalary + "%\n";
+            drawGraph(g, graphX, graphY, doubleLoanPercentSalary, jobs[i]);
+            graphY += 200;
+            if (graphY > 470) {
+                graphX += 380;
+                graphY = 70;
+            }
+        }
+        System.out.println("\nSummary of provided information: \n" + loanInformation + "\n" + loanSummary);
+        return loanInformation + "\n" + loanSummary;
     }
-    public static double roundingTenths(double numberToRound) {
-        return (int) Math.round(numberToRound*100)/100.0;
+    // Drawing panel code stuff
+    public static void drawGraph(Graphics g, int x, int y, double loan, String job) {
+        int lineCount = 10; // used to draw some lines in the meters
+        // just lets the text tell you if you are over or under the recommended 8% limit
+        String underOver = "over";
+        if (loan < 8) underOver = "under";
+        DecimalFormat df = new DecimalFormat("##.##");
+        // handles the text box, text, and shadow effect for the bars
+        g.setColor(Color.BLACK);
+        g.fillRect(x - 1, y + 9, 23, 143);
+        g.drawRect(x + 60, y + 30, 280, 130);
+        g.fillOval(x - 1, y - 1, 23, 24);
+        g.fillOval(x - 1, y + 138, 23, 24);
+        g.setFont(new Font("Trebuchet MS", Font.PLAIN, 18));
+        g.drawString(job, x + 60, y + 20);
+        g.setFont(new Font("Trebuchet MS",Font.PLAIN, 12));
+        g.drawString("Based on the information you have entered, the", x + 65, y + 45);
+        g.drawString("percentage of your average salary going towards", x + 65, y + 59);
+        g.drawString("loan payments would be " + df.format(loan) + "%, which is " + underOver, x + 65, y + 73);
+        g.drawString("the Department of Education's recommended 8%", x + 65, y + 87);
+        g.drawString("limit.", x + 65, y + 101);
+        if (loan > 8) {
+            g.drawString("Due to this high percentage, it may also be", x + 65, y + 115);
+            g.drawString("prudent to do additional research into housing", x + 65, y + 129);
+            g.drawString("costs, entry-level pay, and other job-related", x + 65, y + 143);
+            g.drawString("expenses, should you wish to pursue this career.", x + 65, y + 157);
+        }
+        // draws the bars
+        g.setColor(Color.GREEN);
+        g.fillOval(x, y, 20, 22);
+        g.fillRect(x, y + 10, 20, 30);
+        g.setColor(Color.YELLOW);
+        g.fillRect(x, y + 40, 20, 40);
+        g.setColor(Color.ORANGE);
+        g.fillRect(x, y + 80, 20, 40);
+        g.setColor(Color.RED);
+        g.fillRect(x, y + 120, 20, 30);
+        g.fillOval(x, y + 138, 20, 22);
+        g.setColor(Color.BLACK);
+        // adds some cool lines to the bars
+        for (int i =  0; i < 29; i++) {
+            g.drawLine(x + 16, y + lineCount, x + 20, y + lineCount);
+            lineCount = lineCount + 5;
+        }
+        // adds some labels to the bars
+        g.setFont(new Font("Trebuchet MS", Font.PLAIN, 12));
+        g.drawString("4%", x + 2, y + 45);
+        g.drawString("6%", x + 2, y + 85);
+        g.drawString("8%", x + 2, y + 125);
+        // calculates the arrow height and prevents it from going too high or low on the meter
+        double arrowY = (loan - 2) * 20;
+        if (arrowY > 160) arrowY = 160;
+        if (arrowY < 0) arrowY = 0;
+        // draws the pointy arrow
+        drawArrow(g, x + 25, (int) (y + arrowY));
     }
-    
+    // draws the arrow, doesn't really need to be a separate method now but everything used to be more modular
+    public static void drawArrow(Graphics g, int x, int y) {
+        g.setColor(Color.BLACK);
+        g.drawLine(x, y, x + 5, y - 5);
+        g.drawLine(x, y, x + 5, y + 5);
+        g.drawLine(x, y, x + 15, y);
+    }
     //final file output
-    public static String fileCreation(Scanner main) throws FileNotFoundException {
-        System.out.print("Do you want a copy of this information stored on a separate file? ");
+    public static void fileCreation(Scanner main, String loanSummary) throws FileNotFoundException {
+        // start of file method
+        System.out.print("\nDo you want a copy of this information stored on a separate file? ");
         String response = main.next();
         while (!response.equalsIgnoreCase("yes") && !response.equalsIgnoreCase("no")) {
-            System.out.println("Invalid response (yes/no) ");
+            System.out.println("Invalid response (yes/no).");
             System.out.print("Do you want a copy of this information stored on a separate file? ");
             response = main.next();
         }
+
         if (response.equalsIgnoreCase("yes")) {
-            System.out.print("Type in a file name: "); // user error for file names
-            String outputFileName = main.next() + ".txt";
-            while ((outputFileName.indexOf('@') != -1) || (outputFileName.indexOf('$') != -1) || (outputFileName.indexOf('%') != -1) || (outputFileName.indexOf('&') != -1) ||
-                    (outputFileName.indexOf('\\') != -1) || (outputFileName.indexOf('/') != -1) || (outputFileName.indexOf(':') != -1) ||
-                    (outputFileName.indexOf('*') != -1) || (outputFileName.indexOf('?') != -1) || (outputFileName.indexOf('\"') != -1) ||
-                    (outputFileName.indexOf('\'') != -1) || (outputFileName.indexOf('<') != -1) || (outputFileName.indexOf('>') != -1) ||
-                    (outputFileName.indexOf('|') != -1) || (outputFileName.indexOf('~') != -1) || (outputFileName.indexOf('`') != -1) ||
-                    (outputFileName.indexOf('#') != -1) || (outputFileName.indexOf('^') != -1) || (outputFileName.indexOf('+') != -1) ||
-                    (outputFileName.indexOf('=') != -1) || (outputFileName.indexOf('{') != -1) || (outputFileName.indexOf('}') != -1) ||
-                    (outputFileName.indexOf('[') != -1) || (outputFileName.indexOf(']') != -1) || (outputFileName.indexOf(';') != -1) || (outputFileName.indexOf('!') != -1)) { // have to account for special characters;
-                System.out.println("Invalid file name.");
-                System.out.print("Do you want information on proper file names? yes/no ");
+            System.out.print("\nEnter a file path: "); // copy and paste path without quotes
+            String filePath = main.next();
+
+            while ((filePath.indexOf('@') != -1) || (filePath.indexOf('$') != -1) || (filePath.indexOf('%') != -1) || (filePath.indexOf('&') != -1) ||
+                    (filePath.indexOf('/') != -1) || (filePath.indexOf('*') != -1) || (filePath.indexOf('?') != -1) || (filePath.indexOf('\"') != -1) ||
+                    (filePath.indexOf('\'') != -1) || (filePath.indexOf('<') != -1) || (filePath.indexOf('>') != -1) ||
+                    (filePath.indexOf('|') != -1) || (filePath.indexOf('~') != -1) || (filePath.indexOf('`') != -1) ||
+                    (filePath.indexOf('#') != -1) || (filePath.indexOf('^') != -1) || (filePath.indexOf('+') != -1) ||
+                    (filePath.indexOf('=') != -1) || (filePath.indexOf('{') != -1) || (filePath.indexOf('}') != -1) ||
+                    (filePath.indexOf('[') != -1) || (filePath.indexOf(']') != -1) || (filePath.indexOf(';') != -1) || (filePath.indexOf('!') != -1)) { // have to account for special characters
+                System.out.println("Invalid file path.");
+                System.out.print("Do you want information on proper file paths (yes/no)? ");
                 String answerFileInfo = main.next();
-                if (answerFileInfo.equalsIgnoreCase("yes")) {
-                    System.out.println("\nAllowed: \nletters, number, (), _, -, , ,, .");
-                    System.out.println("\nNot Allowed: \n*spaces\n*Special Characters: @, $, %, &, \\, /, :, *, ?, \"," +
-                            " ', <, >, |, ~, `, #, ^, +, =, {, }, [, ], ;, !\n");
+                while (!answerFileInfo.equalsIgnoreCase("yes") && !answerFileInfo.equalsIgnoreCase("no")) {
+                    System.out.println("Invalid response (yes/no).");
+                    System.out.print("Do you want information on proper file paths (yes/no)? ");
+                    answerFileInfo = main.next();
                 }
-                System.out.print("Type in a file name: ");
-                outputFileName = main.next();
+                if (answerFileInfo.equalsIgnoreCase("yes")) {
+                    System.out.println("\nAllowed: \n*Letters\n*Numbers\n*These Characters: (), _, -, , ,, .");
+                    System.out.println("\nNot Allowed: \n*Spaces\n*Special Characters: @, $, %, &, /, *, ?, \"," +
+                            " ', <, >, |, ~, `, #, ^, +, =, {, }, [, ], ;, !\n");
+                    System.out.println("Example file path: C:\\Users\\naxos\\OneDrive\\Documents\\example.txt\n");
+                    System.out.print("Enter a file path: ");
+                    filePath = main.next();
+                } else {
+                    System.out.print("Enter a file path: ");
+                    filePath = main.nextLine();
+                }
             }
-            return outputFileName;
+
+            File file = new File(filePath);
+
+            try {
+                if (file.createNewFile()) {
+                    System.out.print("\nFile created successfully.\n"); // if creating new file
+                    BufferedWriter buffer = new BufferedWriter(new FileWriter(filePath));
+                    buffer.write("Summary of provided information: \n" + loanSummary); // write in to file
+                    buffer.close();
+                } else {
+                    System.out.print("\nFile already exists.\n"); // if adding to old file
+                    BufferedWriter buffer = new BufferedWriter(new FileWriter(filePath));
+                    buffer.write("Summary of provided information: \n" + loanSummary); // write in to file
+                    buffer.close();
+                }
+            } catch (Exception ex) { // for buffer
+            }
         }
-        return "This is the end of the program.";
+        System.out.print("\nThis is the end of the program.");
     }
 }
